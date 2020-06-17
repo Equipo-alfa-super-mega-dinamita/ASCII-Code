@@ -1,156 +1,241 @@
-import processing.video.*;
-import java.util.*;
+import processing.core.PApplet;
+import processing.core.PFont;
+import processing.core.PGraphics;
+import processing.core.PImage;
+import processing.event.MouseEvent;
+import java.io.File;
 
-char[] char_list;
-int N = 100;
-IntDict count;
-String[] ordered;
-PFont mono;
-PImage test;
-int res = 50;
-boolean mode = true;
-boolean col = false;
+
+
+PImage download, img;
+PFont  ancizar;
+ASCIIDrawer drawer;
+ImageProcessor preliminar;
+File[] files;
+
 PImage[] imgs;
-int d= 1;
 
-Movie movie;
-int index = 0;
-void setup(){
-  
-  fullScreen();
- //size(1000,1200);
- 
-  print(PFont.list());
-  mono = createFont("Courier New Negrita", width/50);
-  char_list = new char[95];
-  for (int i = 32; i < 127; i++) {
-    char_list[i - 32] = (char)i;
-  }
-  count = new IntDict();
-  printArray(char_list);
-    
-  loadPixels();
-  textAlign(CENTER, CENTER); textFont(mono); textSize(res*0.65);
-  
-  background(0); 
-  noStroke();
-  outerloop:
-  for(int j = 0; j<10; j++){
-    for(int i = 0; i<10; i++){
-      if(i + j*10 > char_list.length - 1) break outerloop;      
-        fill(255);
-        textAlign(CENTER, CENTER);
-        text(char_list[i + j*10]+"", i*res, j*res,res,res); 
-            
-        PImage area = get(i*res, j*res, res, res);
-        count.set(char_list[i + j*10]+"", 0);        
-        for(int y = 0; y< area.height; y++){
-          for(int x = 0; x<area.width; x++){            
-              if(brightness(area.pixels[x+y*area.width]) > 0){
-                count.increment(char_list[i + j*10]+"");
-              }              
-          }
-        }
-      }  
-  }
-  count.sortValues();
-  for(String s : count.keyArray()){
-    println(s +":"+ count.get(s)); 
-  }
-  ordered  = count.keyArray();
-  test = loadImage("abues.jpeg");
-  //movie = new Movie(this, "breakdown.mp4");
-  //movie.loop();
-   File[] files = listFiles(sketchPath("data/photos"));
-   imgs = new PImage[files.length];
-   for (int i = 0; i< files.length; i++){ 
-    imgs[i] = adjusted(loadImage(files[i].toString()));
-   }
+int curImage = 0;
+
+
+
+
+public void settings() {
+
+    size(1600,800);
+}
+
+
+public void setup() {
+
+
+    ancizar = createFont("AncizarSans-Regular_02042016.otf", 32);
+
+    drawer = new ASCIIDrawer(this);
+    preliminar = new ImageProcessor(this, drawer);
+
+    files = listFiles(sketchPath("data/image"));
+
+    imgs = new PImage[files.length];
+    for (int i = 0; i< files.length; i++){
+        imgs[i] = loadImage(files[i].toString());
+    }
+
+    preliminar.load(imgs[0],  (int)(0.45 * width), (int) (0.55 * height));
+    img = preliminar.getProcessed();
+    drawer.createAsciiImage(img);
+    download = loadImage("data/download.png");
+
 
 }
 
 
-PImage adjusted(PImage img){
+public void keyPressed(){
 
-  PGraphics pg = createGraphics(width,height);
+    if( key == ' '){
 
-  pg.beginDraw();
-  int w, h;
-  
-  if (img.width / img.height > width / height){
+        curImage = (curImage + 1) % files.length;
+        preliminar.load(imgs[curImage],  (int)(0.45 * width), (int) (0.55 * height));
 
-    w = img.width * width/height;
-    h = height;
-  }
-  else {
-    
-    
-        w = width;
-    h = img.height * width/height;
-  }
-  println(w,h);
-  pg.imageMode(CENTER);
-  pg.image(img, width/2, height/2, w, h);
-  pg.endDraw();
+    }
 
-  
-  return pg.get(0,0,width, height);
-}
 
-void movieEvent(Movie m) {
-  m.read();
 }
 
 
-void draw(){
-  
-  asciiImage(imgs[index]);
- 
+
+public void draw() {
+
+    float w = width;
+    float h = height;
+    //asciiImage(test, 500, 500);
+    background(12);
+    //fill(255,0,0);
+    //image(adjusted(test, width, height), 0, 0);
+    //image(drawer.asciiImage(test, width, height),0,0);
+
+
+    textFont(ancizar, 50);
+    fill(255);
+
+    rectMode(CORNERS);
+
+    text("Original", (int) (0.02*w), 0, (int)  (w*0.45), (int) (h*0.075));
+    text("ASCII", (int) (0.52*w), 0, (int)  (w*0.95), (int) (h*0.075));
+
+
+    fill(0);
+    noStroke();
+    rectMode(CORNER);
+    rect( 0.024f *w, 0.0749f * h,  0.452f * w,  0.552f * h );
+    rect( 0.524f *w, 0.0749f * h,  0.452f * w,  0.552f * h );
+
+
+
+
+
+    image(   preliminar.getProcessed() ,  0.025f * w,   0.075f * h,  0.45f * w, 0.55f * h );
+    image( drawer.asciiImage(),  0.525f * w,   0.075f * h,  0.45f * w,  0.55f * h );
+
+    preliminar.drawHistogram(0.25f*w,0.65f*h,  0.5f * w, 0.35f* h);
+
+    fill(255,0,0);
+    drawButtons();
+    text(frameRate, mouseX, mouseY);
+
+
 }
 
-// Function to list all the files in a directory
-File[] listFiles(String dir) {
-  File file = new File(dir);
-  if (file.isDirectory()) {
-    File[] files = file.listFiles();
-    return files;
-  } else {
-    // If it's not a directory
-    return null;
-  }
+
+public void drawButtons(){
+    int w =  width, h = height;
+    rectMode(CORNER);
+    textFont(ancizar, 18);
+
+    boolean[] st = btnStates();
+
+    fill( st[0] ? color(151, 194, 231) : color(68, 146, 212)); rect(0.025f * w ,0.83f* h, w*0.0625f, h*0.0625f); fill(33); text("Luma",0.025f * w ,0.83f* h, w*0.0625f, h*0.0625f);
+    fill( st[1] ? color(151, 194, 231) : color(68, 146, 212)); rect(0.095f * w ,0.83f* h, w*0.0625f, h*0.0625f); fill(33); text("Threshold",0.095f * w ,0.83f* h, w*0.0625f, h*0.0625f);
+    fill( st[2] ? color(151, 194, 231) : color(68, 146, 212));rect(0.165f * w ,0.83f* h, w*0.0625f, h*0.0625f); fill(33); text("Inverse", 0.165f * w ,0.83f* h, w*0.0625f, h*0.0625f);
+    fill( st[3] ? color(151, 194, 231) : color(68, 146, 212)); rect(0.025f * w ,0.92f* h, w*0.0625f, h*0.0625f); fill(33); text("Convolution",0.025f * w ,0.92f* h, w*0.0625f, h*0.0625f);
+    fill( st[4] ? color(151, 194, 231) : color(68, 146, 212)); rect(0.095f * w ,0.92f* h, w*0.0625f, h*0.0625f); fill(33); text("Color",0.095f * w ,0.92f* h, w*0.0625f, h*0.0625f);
+    fill( st[5] ? color(151, 194, 231) : color(68, 146, 212));rect(0.165f * w ,0.92f* h, w*0.0625f, h*0.0625f); fill(33); text("Background",0.165f * w ,0.92f* h, w*0.0625f, h*0.0625f);
+
+    imageMode(CENTER);
+    image(download,w*0.5f, h* 0.65f, 0.035f*w,0.035f*w);
+
+
+    noStroke();
+    fill(255, 70);
+    switch (checkButton(mouseX, mouseY)) {
+        case 1 : rect(0.025f * w, 0.83f * h, w * 0.0625f, h * 0.0625f);
+        case 3 : rect(0.095f * w, 0.83f * h, w * 0.0625f, h * 0.0625f);
+        case 5 : rect(0.165f * w, 0.83f * h, w * 0.0625f, h * 0.0625f);
+        case 2 : rect(0.025f * w, 0.92f * h, w * 0.0625f, h * 0.0625f);
+        case 4 : rect(0.095f * w, 0.92f * h, w * 0.0625f, h * 0.0625f);
+        case 6 : rect(0.165f * w, 0.92f * h, w * 0.0625f, h * 0.0625f);
+        case 7 : image(download,w*0.5f, h* 0.65f, 0.04f*w,0.04f*w);
+    }
+
+    imageMode(CORNER);
+
 }
-PImage asciiImage(PImage img){
-  //movie.volume(0.001);
-  int M = (int)N *height/width;
-  image(img, 0,0, N, M);
-  
-  PImage pix = get(0,0,N,M);
-  background(col? 255:0);
-  textSize(width*1.2/N);
-  for(int j = 0; j<M; j++){
-    for(int i = 0; i<N; i++){
-       
-        if(mode) fill(pix.pixels[i+j*pix.width]);
-        else fill(col? 0:255); 
-        textAlign(LEFT, TOP);
-        text(ordered[floor(map(brightness(pix.pixels[i+j*pix.width]) ,0,255,col? ordered.length -1:0, col? 0:ordered.length -1))] 
-        ,i*width/N , j*height/M);
-      
-    } 
-  }
-
-  return get(0,0,width,height);
-
-} 
 
 
-void keyPressed(){
-  
-  
-  if (key == '+' && N <= width) N = (N + 2);
-  else if(key == '-' && N >= 1) N = (N - 2);
-  else if(key == 'm') mode = !mode;
-  else if(key == 'g') col = !col;
-  else if(key == 's') save("lau.png");
-  else if(key == 'q') index = (index + 1) % imgs.length;
+boolean[] btnStates() {
+
+
+
+    return new boolean[]{
+            drawer.getParam(1),
+            preliminar.getParam(3),
+            preliminar.getParam(5),
+            preliminar.getParam(2),
+            drawer.getParam(4),
+            drawer.getParam(6)
+            };
+}
+
+
+int checkButton(int x, int y){
+
+    int w =  width, h = height;
+    //ellipse(w*0.5f, h* 0.65f, 0.0175f*w,0.0175f*w );
+
+
+
+    if((x - w*0.5f)*(x -w*0.5f) + (y -h* 0.65f)*(y - h* 0.65f) < 0.02f*w * 0.02f*w ){
+        return 7;
+    }
+
+
+    boolean row;
+
+    if(y >= 0.85f*h && y <= (0.83f +0.0625f)*h){ //Fila 1
+        row = true;
+    }
+    else if (y >= 0.92f*h && y <= (0.92f +0.0625f)*h) {
+        row = false;
+    }
+    else return - 1;
+
+
+
+    if(x >= 0.025f * w && x <= (0.025f +0.0625f)*w){ //Fila 1
+        if(row) return 1;
+        else return 2;
+
+    }
+    else if (x >= 0.095f * w && x <= (0.095f +0.0625f)*w) {
+        if(row) return 3;
+        else return 4;
+    }
+    else if (x >= 0.165f * w && x <= (0.165f +0.0625f)*w) {
+        if(row) return 5;
+        else return 6;
+    }
+
+
+    return - 1;
+
+}
+
+
+@Override
+public void mouseWheel(MouseEvent event) {
+    super.mouseWheel(event);
+
+    drawer.updateN(event.getCount());
+
+
+}
+
+@Override
+public void mousePressed() {
+    super.mousePressed();
+
+    println(checkButton(mouseX, mouseY));
+    switch (checkButton(mouseX, mouseY)) {
+        case 1 : drawer.updateParam(1); break; // Luma
+        case 3 : preliminar.updateParam(3); break; // Threshold
+        case 5 : preliminar.updateParam(5); break;// Inverse
+        case 2 : preliminar.updateParam(2); break; // Convolution
+        case 4 : drawer.updateParam(4); break;// Color
+        case 6 : drawer.updateParam(6); break; // Black and White
+        case 7 : download();
+        //
+    }
+}
+
+private void download() {
+
+    println("Download");
+    PImage im = drawer.asciiImage();
+    PGraphics pg = createGraphics(im.width, im.height);
+    pg.beginDraw();
+    pg.image( im, 0,0 );
+    pg.endDraw();
+
+    pg.save("ascii-output.png");
+
 }
